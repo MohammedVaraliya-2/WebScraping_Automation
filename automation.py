@@ -13,29 +13,47 @@ driver.get("https://www.myntra.com/women-tops")
 html_content = driver.page_source
 soup = BeautifulSoup(html_content, 'html.parser')
 
-# Finding individual product's info
-while len(l) < 50:
+# Find the <ul> tag containing all the product information
+ul_tag = soup.find('ul', class_='results-base')
+
+# Find all <li> tags within the <ul> tag
+product_list_items = ul_tag.find_all('li', class_='product-base')
+
+# Iterate over each <li> tag to scrape product information
+for li_tag in product_list_items:
     o = {}  # Create a new dictionary for each product
     try:
-        o["Product Brand"] = soup.find_all('h3', {'class': 'product-brand'})[len(l)].text.strip()
+        o["Product Brand"] = li_tag.find('h3', class_='product-brand').text.strip()
     except:
         o["Product Brand"] = None
     try:
-        o["Product Name"] = soup.find_all('h4', {'class': 'product-product'})[len(l)].text.strip()
+        o["Product Name"] = li_tag.find('h4', class_='product-product').text.strip()
     except:
         o["Product Name"] = None
     try:
-        o["Product Price"] = soup.find_all('div', {'class': 'product-price'})[len(l)].find('span', {'class': 'product-discountedPrice'}).text.strip()
+        # Extract product price text
+        price_text = li_tag.find('div', class_='product-price').find('span', class_='product-discountedPrice').text.strip()
+        # Convert product price to numerical value
+        o["Product Price"] = float(price_text.replace('Rs.', '').replace(',', ''))
     except:
         o["Product Price"] = None
     try:
-        o["Product Ratings"] = soup.find_all('div', {'class': 'product-ratingsContainer'})[len(l)].find('span').text.strip()
+        o["Product Ratings"] = float(li_tag.find('div', class_='product-ratingsContainer').find('span').text.strip())
     except:
         o["Product Ratings"] = None
     try:
-        ratings_count = soup.find_all('div', {'class': 'product-ratingsCount'})[len(l)].text.strip()
-        # Remove "|" character from ratings count
-        o["Number of People have rated this product"] = ratings_count.split("|")[1].strip() if "|" in ratings_count else ratings_count.strip()
+        # Extract raw ratings count string
+        ratings_count_raw = li_tag.find('div', class_='product-ratingsCount').text.strip()
+        # Process the ratings count string
+        if '|' in ratings_count_raw:
+            ratings_count = ratings_count_raw.split("|")[1].strip()
+        else:
+            ratings_count = ratings_count_raw
+        # Convert number of people who have rated the product to numerical value
+        if 'k' in ratings_count:
+            o["Number of People have rated this product"] = float(ratings_count.replace('k', '')) * 1000
+        else:
+            o["Number of People have rated this product"] = float(ratings_count)
     except:
         o["Number of People have rated this product"] = None
 
